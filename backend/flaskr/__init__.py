@@ -1,8 +1,5 @@
-import os
 from flask import Flask, request, abort, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-import random
 
 from models import setup_db, Question, Category
 
@@ -61,8 +58,8 @@ def create_app(test_config=None):
   @app.route('/questions', methods=['GET'])
   def get_questions():
     page = request.args.get('page', 1, type=int)
-    start = (page - 1) * 10
-    end = start + 10
+    start = (page - 1) * QUESTIONS_PER_PAGE
+    end = start + QUESTIONS_PER_PAGE
     try:
       rows = Question.query.all()
       questions = [row.format() for row in rows]
@@ -211,17 +208,56 @@ def create_app(test_config=None):
     req = request.get_json()
     category = req['quiz_category']['id']
     prev_ques = req['previous_questions']   
-    if len(prev_ques) <= 0:
+    if category == 0:
+      result = play_all(prev_ques)
+    if category != 0:
+      result = play_specific(category, prev_ques)
+    return result       
+
+  # Quiz Functions to play all questions
+  # when category == 0
+  # Takes ques_arr as input argument
+  # Return jsonify question object 
+  def play_all(ques_arr):
+    if len(ques_arr) <= 0:
+       try:
+        question = Question.query.order_by(Question.id.asc()).first()
+        if question is None:
+           abort(404)
+       except:
+          abort(500) 
+    if len(ques_arr) >= 1:
+      try:
+       question = Question.query.\
+                  filter(Question.id.not_in(ques_arr)).\
+                  order_by(Question.id.asc()).first()
+      except:
+        abort(500)
+      if question is None:
+        return jsonify({
+          'success': True
+        })              
+    return jsonify({
+      'success': True,
+      'question': question.format()
+    }) 
+
+  # Quiz function to play specific questions
+  # when category == 1
+  # Takes category and ques_arr as input argument
+  # Return jsonify question object 
+  def play_specific(category, ques_arr):
+    if len(ques_arr) <= 0:
        try:
         question = Question.query.filter_by(category=category).order_by(Question.id.asc()).first()
         if question is None:
            abort(404)
        except:
           abort(500) 
-    if len(prev_ques) >= 1:
+    if len(ques_arr) >= 1:
       try:
        question = Question.query.filter_by(category=category).\
-                  filter(Question.id.not_in(prev_ques)).\
+                  filter(Question.id.not_in(ques_arr)).\
                   order_by(Question.id.asc()).first()
       except:
         abort(500)
