@@ -1,7 +1,9 @@
+import os
 import unittest
 import json
 from flask_sqlalchemy import SQLAlchemy
 from settings import DB_NAME, DB_USER, DB_PASSWORD
+
 from flaskr import create_app
 from models import setup_db, Question, Category
 
